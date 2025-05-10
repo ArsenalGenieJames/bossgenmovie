@@ -1,0 +1,532 @@
+// Initialize the application
+function initialize() {
+    const apiKey = config.API_KEY;
+    const movieDataContainer = document.getElementById("movie-list");
+    const seriesDataContainer = document.getElementById("series-list");
+    const indicatorsContainer = document.querySelector('#indicators-carousel .absolute.z-30.flex');
+
+    // Function to generate carousel indicators
+    function generateIndicators(count) {
+        let indicatorsHTML = '';
+        for (let i = 0; i < count; i++) {
+            indicatorsHTML += `
+                <button type="button" 
+                        class="w-3 h-3 rounded-full ${i === 0 ? 'bg-white' : 'bg-white/70'}" 
+                        aria-current="${i === 0 ? 'true' : 'false'}" 
+                        aria-label="Slide ${i + 1}" 
+                        data-carousel-slide-to="${i}">
+                </button>`;
+        }
+        indicatorsContainer.innerHTML = indicatorsHTML;
+    }
+
+    // Function to fetch trailer for a movie
+    async function getMovieTrailer(movieId) {
+        try {
+            const response = await fetch(`https://api.themoviedb.org/3/movie/${movieId}/videos?api_key=${apiKey}`);
+            const data = await response.json();
+            const trailer = data.results.find(video => video.type === "Trailer" && video.site === "YouTube");
+            return trailer ? trailer.key : null;
+        } catch (error) {
+            console.error('Error fetching trailer:', error);
+            return null;
+        }
+    }
+
+    // Function to fetch trailer for a TV show
+    async function getTVTrailer(seriesId) {
+        try {
+            const response = await fetch(`https://api.themoviedb.org/3/tv/${seriesId}/videos?api_key=${apiKey}`);
+            const data = await response.json();
+            const trailer = data.results.find(video => video.type === "Trailer" && video.site === "YouTube");
+            return trailer ? trailer.key : null;
+        } catch (error) {
+            console.error('Error fetching trailer:', error);
+            return null;
+        }
+    }
+
+    // Function to create video controls
+    function createVideoControls() {
+        return `
+            <div class="absolute top-4 right-4 z-40 flex items-center space-x-2">
+                <button class="video-control bg-black/50 hover:bg-black/70 text-white rounded-full p-2" onclick="toggleMute(this)">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+                    </svg>
+                </button>
+            </div>`;
+    }
+
+    // Function to load trending movies for carousel
+    async function loadTrendingMovies() {
+        try {
+            const response = await fetch(`https://api.themoviedb.org/3/trending/movie/day?api_key=${apiKey}`);
+            const data = await response.json();
+            const movies = data.results.slice(0, 10); // Get first 10 trending movies
+            let carouselHTML = '';
+            
+            // First item as trailer
+            const firstMovie = movies[0];
+            const trailerKey = await getMovieTrailer(firstMovie.id);
+            
+            carouselHTML += `
+                <div class="hidden duration-700 ease-in-out" data-carousel-item="active">
+                    <div class="relative w-full h-full">
+                        <div class="absolute inset-0 bg-black bg-opacity-60"></div>
+                        ${trailerKey ? `
+                            <div class="relative w-full h-full">
+                                <iframe 
+                                    id="movie-trailer-${firstMovie.id}"
+                                    class="absolute inset-0 w-full h-full"
+                                    src="https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=1&loop=1&playlist=${trailerKey}&modestbranding=1&enablejsapi=1" 
+                                    frameborder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowfullscreen>
+                                </iframe>
+                                ${createVideoControls()}
+                            </div>
+                        ` : `
+                            <img class="absolute inset-0 w-full h-full object-cover" 
+                                 src="https://image.tmdb.org/t/p/original${firstMovie.backdrop_path}"
+                                 alt="${firstMovie.title}">
+                        `}
+                        <div class="absolute bottom-0 left-0 right-0 p-8">
+                            <h2 class="text-4xl font-bold text-white mb-2">${firstMovie.title}</h2>
+                            <p class="text-gray-300 mb-4">${firstMovie.overview}</p>
+                            <button onclick="watchContent('movie', ${firstMovie.id})" 
+                                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">
+                                Watch Now
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+
+            // Rest as images
+            for (let i = 1; i < movies.length; i++) {
+                const movie = movies[i];
+                carouselHTML += `
+                    <div class="hidden duration-700 ease-in-out" data-carousel-item>
+                        <div class="relative w-full h-full">
+                            <div class="absolute inset-0 bg-black bg-opacity-60"></div>
+                            <img class="absolute inset-0 w-full h-full object-cover" 
+                                 src="https://image.tmdb.org/t/p/original${movie.backdrop_path}"
+                                 alt="${movie.title}">
+                            <div class="absolute bottom-0 left-0 right-0 p-8">
+                                <h2 class="text-4xl font-bold text-white mb-2">${movie.title}</h2>
+                                <p class="text-gray-300 mb-4">${movie.overview}</p>
+                                <button onclick="watchContent('movie', ${movie.id})" 
+                                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">
+                                    Watch Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            movieDataContainer.innerHTML = carouselHTML;
+            generateIndicators(movies.length);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    } 
+
+    // Function to load trending series for carousel
+    async function loadTrendingSeries() {
+        try {
+            const response = await fetch(`https://api.themoviedb.org/3/trending/tv/day?api_key=${apiKey}`);
+            const data = await response.json();
+            const series = data.results.slice(0, 10); // Get first 10 trending series
+            let carouselHTML = '';
+            
+            // First item as trailer
+            const firstSeries = series[0];
+            const trailerKey = await getTVTrailer(firstSeries.id);
+            
+            carouselHTML += `
+                <div class="hidden duration-700 ease-in-out" data-carousel-item="active">
+                    <div class="relative w-full h-full">
+                        <div class="absolute inset-0 bg-black bg-opacity-60"></div>
+                        ${trailerKey ? `
+                            <div class="relative w-full h-full">
+                                <iframe 
+                                    id="series-trailer-${firstSeries.id}"
+                                    class="absolute inset-0 w-full h-full"
+                                    src="https://www.youtube.com/embed/${trailerKey}?autoplay=1&mute=1&controls=1&loop=1&playlist=${trailerKey}&modestbranding=1&enablejsapi=1" 
+                                    frameborder="0" 
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                                    allowfullscreen>
+                                </iframe>
+                                ${createVideoControls()}
+                            </div>
+                        ` : `
+                            <img class="absolute inset-0 w-full h-full object-cover"
+                                 src="https://image.tmdb.org/t/p/original${firstSeries.backdrop_path}"
+                                 alt="${firstSeries.name}">
+                        `}
+                        <div class="absolute bottom-0 left-0 right-0 p-8">
+                            <h2 class="text-4xl font-bold text-white mb-2">${firstSeries.name}</h2>
+                            <p class="text-gray-300 mb-4">${firstSeries.overview}</p>
+                            <button onclick="watchContent('tv', ${firstSeries.id})" 
+                                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">
+                                Watch Now
+                            </button>
+                        </div>
+                    </div>
+                </div>`;
+
+            // Rest as images
+            for (let i = 1; i < series.length; i++) {
+                const show = series[i];
+                carouselHTML += `
+                    <div class="hidden duration-700 ease-in-out" data-carousel-item>
+                        <div class="relative w-full h-full">
+                            <div class="absolute inset-0 bg-black bg-opacity-60"></div>
+                            <img class="absolute inset-0 w-full h-full object-cover"
+                                 src="https://image.tmdb.org/t/p/original${show.backdrop_path}"
+                                 alt="${show.name}">
+                            <div class="absolute bottom-0 left-0 right-0 p-8">
+                                <h2 class="text-4xl font-bold text-white mb-2">${show.name}</h2>
+                                <p class="text-gray-300 mb-4">${show.overview}</p>
+                                <button onclick="watchContent('tv', ${show.id})" 
+                                        class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-6 rounded">
+                                    Watch Now
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            seriesDataContainer.innerHTML = carouselHTML;
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    }
+
+    // Function to load latest movies
+    function loadLatestMovies() {
+        fetch(`https://api.themoviedb.org/3/movie/now_playing?api_key=${apiKey}`)
+            .then(response => response.json())
+            .then(data => {
+                const latestMoviesGrid = document.querySelector('#latest-movies .grid');
+                latestMoviesGrid.innerHTML = ''; // Clear existing content
+
+                data.results.forEach(movie => {
+                    const movieCard = document.createElement('div');
+                    movieCard.classList.add('movie-card');
+                    movieCard.innerHTML = `
+                        <img class="h-auto max-w-full rounded-lg" 
+                             src="https://image.tmdb.org/t/p/w500${movie.poster_path}" 
+                             alt="${movie.title}">
+                        <div class="p-4">
+                            <h3 class="text-white font-bold">${movie.title}</h3>
+                            <p class="text-gray-400">${movie.release_date.split('-')[0]} | Movie</p>
+                            <button onclick="watchContent('movie', ${movie.id})" 
+                                    class="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                                Watch Now
+                            </button>
+                        </div>
+                    `;
+                    latestMoviesGrid.appendChild(movieCard);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // Function to load latest series 
+    function loadLatestSeries() {
+        fetch(`https://api.themoviedb.org/3/tv/popular?api_key=${apiKey}`)
+            .then(response => response.json())
+            .then(data => {
+                const latestSeriesGrid = document.querySelector('#latest-series .grid');
+                latestSeriesGrid.innerHTML = ''; // Clear existing content
+
+                data.results.forEach(series => {
+                    const seriesCard = document.createElement('div');
+                    seriesCard.classList.add('series-card');
+                    seriesCard.innerHTML = `
+                        <img class="h-auto max-w-full rounded-lg" 
+                             src="https://image.tmdb.org/t/p/w500${series.poster_path}" 
+                             alt="${series.name}">
+                        <div class="p-4">
+                            <h3 class="text-white font-bold">${series.name}</h3>
+                            <p class="text-gray-400">${series.first_air_date.split('-')[0]} | Series</p>
+                            <button onclick="watchContent('tv', ${series.id})" 
+                                    class="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                                Watch Now
+                            </button>
+                        </div>
+                    `;
+                    latestSeriesGrid.appendChild(seriesCard);
+                });
+            })
+            .catch(error => console.error('Error:', error));
+    }
+
+    // Function to handle watch button clicks
+    window.watchContent = function(type, id) {
+        window.location.href = `watch.html?type=${type}&id=${id}`;
+    }
+
+    // Function to filter content by genre
+    window.filterByGenre = function(genreId) {
+        document.getElementById('latest-movies').style.display = 'none';
+        document.getElementById('latest-series').style.display = 'none';
+        document.getElementById('search-results').style.display = 'block';
+        const resultsGrid = document.getElementById('results-grid');
+        resultsGrid.innerHTML = '';
+
+        // Fetch movies by genre
+        fetch(`https://api.themoviedb.org/3/discover/movie?api_key=${apiKey}&with_genres=${genreId}`)
+            .then(response => response.json())
+            .then(movieData => {
+                // Fetch TV shows by genre
+                return fetch(`https://api.themoviedb.org/3/discover/tv?api_key=${apiKey}&with_genres=${genreId}`)
+                    .then(response => response.json())
+                    .then(tvData => {
+                        return { movies: movieData.results, tvShows: tvData.results };
+                    });
+            })
+            .then(data => {
+                // Display movies
+                data.movies.forEach(movie => {
+                    const resultCard = document.createElement('div');
+                    resultCard.classList.add('search-result-card');
+                    resultCard.innerHTML = `
+                        <img class="h-auto max-w-full rounded-lg" 
+                             src="${movie.poster_path ? 'https://image.tmdb.org/t/p/w500' + movie.poster_path : 'https://source.unsplash.com/random/300x400/?movie'}" 
+                             alt="${movie.title}">
+                        <div class="p-4">
+                            <h3 class="text-white font-bold">${movie.title}</h3>
+                            <p class="text-gray-400">${movie.release_date.split('-')[0]} | Movie</p>
+                            <button onclick="watchContent('movie', ${movie.id})" 
+                                    class="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                                Watch Now
+                            </button>
+                        </div>
+                    `;
+                    resultsGrid.appendChild(resultCard);
+                });
+
+                // Display TV shows
+                data.tvShows.forEach(show => {
+                    const resultCard = document.createElement('div');
+                    resultCard.classList.add('search-result-card');
+                    resultCard.innerHTML = `
+                        <img class="h-auto max-w-full rounded-lg" 
+                             src="${show.poster_path ? 'https://image.tmdb.org/t/p/w500' + show.poster_path : 'https://source.unsplash.com/random/300x400/?tv'}" 
+                             alt="${show.name}">
+                        <div class="p-4">
+                            <h3 class="text-white font-bold">${show.name}</h3>
+                            <p class="text-gray-400">${show.first_air_date.split('-')[0]} | Series</p>
+                            <button onclick="watchContent('tv', ${show.id})" 
+                                    class="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                                Watch Now
+                            </button>
+                        </div>
+                    `;
+                    resultsGrid.appendChild(resultCard);
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultsGrid.innerHTML = '<p class="text-white">An error occurred while fetching results.</p>';
+            });
+    }
+
+    // Initialize carousel with auto-play
+    function initCarousel() {
+        const carousel = document.getElementById('indicators-carousel');
+        const items = carousel.querySelectorAll('[data-carousel-item]');
+        const indicators = carousel.querySelectorAll('[data-carousel-slide-to]');
+        let currentIndex = 0;
+        let interval;
+
+        function showSlide(index) {
+            // Hide all slides
+            items.forEach(item => {
+                item.classList.add('hidden');
+                item.classList.remove('duration-700', 'ease-in-out');
+            });
+
+            // Show selected slide
+            items[index].classList.remove('hidden');
+            items[index].classList.add('duration-700', 'ease-in-out');
+
+            // Update indicators
+            indicators.forEach(indicator => {
+                indicator.classList.remove('bg-white');
+                indicator.classList.add('bg-white/70');
+                indicator.setAttribute('aria-current', 'false');
+            });
+
+            indicators[index].classList.remove('bg-white/70');
+            indicators[index].classList.add('bg-white');
+            indicators[index].setAttribute('aria-current', 'true');
+            currentIndex = index;
+
+            // Reset video state when changing slides
+            const iframes = document.querySelectorAll('iframe');
+            iframes.forEach(iframe => {
+                const newSrc = iframe.src.replace(/mute=0/, 'mute=1');
+                iframe.src = newSrc;
+            });
+        }
+
+        function nextSlide() {
+            const nextIndex = (currentIndex + 1) % items.length;
+            showSlide(nextIndex);
+        }
+
+        function prevSlide() {
+            const prevIndex = (currentIndex - 1 + items.length) % items.length;
+            showSlide(prevIndex);
+        }
+
+        // Auto-play functionality
+        function startAutoPlay() {
+            stopAutoPlay(); // Clear any existing interval
+            interval = setInterval(nextSlide, 8000); // Change slide every 8 seconds
+        }
+
+        function stopAutoPlay() {
+            if (interval) {
+                clearInterval(interval);
+                interval = null;
+            }
+        }
+
+        // Event listeners for manual navigation
+        const prevButton = carousel.querySelector('[data-carousel-prev]');
+        const nextButton = carousel.querySelector('[data-carousel-next]');
+
+        if (prevButton) {
+            prevButton.addEventListener('click', () => {
+                stopAutoPlay();
+                prevSlide();
+                startAutoPlay();
+            });
+        }
+
+        if (nextButton) {
+            nextButton.addEventListener('click', () => {
+                stopAutoPlay();
+                nextSlide();
+                startAutoPlay();
+            });
+        }
+
+        // Event listeners for indicators
+        indicators.forEach((indicator, index) => {
+            indicator.addEventListener('click', () => {
+                stopAutoPlay();
+                showSlide(index);
+                startAutoPlay();
+            });
+        });
+
+        // Start auto-play
+        startAutoPlay();
+
+        // Pause auto-play when hovering over carousel
+        carousel.addEventListener('mouseenter', stopAutoPlay);
+        carousel.addEventListener('mouseleave', startAutoPlay);
+
+        // Add keyboard navigation
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowLeft') {
+                stopAutoPlay();
+                prevSlide();
+                startAutoPlay();
+            } else if (e.key === 'ArrowRight') {
+                stopAutoPlay();
+                nextSlide();
+                startAutoPlay();
+            }
+        });
+    }
+
+    // Add global mute toggle function
+    window.toggleMute = function(button) {
+        const iframe = button.closest('.relative').querySelector('iframe');
+        if (iframe) {
+            const currentSrc = iframe.src;
+            const isMuted = currentSrc.includes('mute=1');
+            const newSrc = currentSrc.replace(
+                isMuted ? 'mute=1' : 'mute=0',
+                isMuted ? 'mute=0' : 'mute=1'
+            );
+            iframe.src = newSrc;
+            
+            // Update button icon
+            button.innerHTML = isMuted ? 
+                `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
+                </svg>` :
+                `<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+                </svg>`;
+        }
+    };
+
+    // Load content when page loads
+    document.addEventListener('DOMContentLoaded', () => {
+        loadTrendingMovies();
+        loadTrendingSeries();
+        loadLatestMovies();
+        loadLatestSeries();
+        initCarousel();
+    });
+
+    // Search functionality
+    document.getElementById('search-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const searchQuery = document.getElementById('search-input').value;
+        const resultsGrid = document.getElementById('results-grid');
+        
+        document.getElementById('latest-movies').style.display = 'none';
+        document.getElementById('latest-series').style.display = 'none';
+        document.getElementById('search-results').style.display = 'block';
+
+        fetch(`https://api.themoviedb.org/3/search/multi?api_key=${apiKey}&query=${searchQuery}`)
+            .then(response => response.json())
+            .then(data => {
+                resultsGrid.innerHTML = '';
+                
+                data.results.forEach(item => {
+                    if (item.media_type === 'movie' || item.media_type === 'tv') {
+                        const posterPath = item.poster_path;
+                        const title = item.title || item.name;
+                        const year = (item.release_date || item.first_air_date || '').split('-')[0];
+                        const mediaType = item.media_type === 'movie' ? 'Movie' : 'Series';
+                        
+                        const resultCard = document.createElement('div');
+                        resultCard.classList.add('search-result-card');
+                        resultCard.innerHTML = `
+                            <img class="h-auto max-w-full rounded-lg" 
+                                 src="${posterPath ? 'https://image.tmdb.org/t/p/w500' + posterPath : 'https://source.unsplash.com/random/300x400/?movie'}" 
+                                 alt="${title}">
+                            <div class="p-4">
+                                <h3 class="text-white font-bold">${title}</h3>
+                                <p class="text-gray-400">${year} | ${mediaType}</p>
+                                <button onclick="watchContent('${item.media_type}', ${item.id})" 
+                                        class="mt-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded">
+                                    Watch Now
+                                </button>
+                            </div>
+                        `;
+                        resultsGrid.appendChild(resultCard);
+                    }
+                });
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultsGrid.innerHTML = '<p class="text-white">An error occurred while fetching results.</p>';
+            });
+    });
+}
+
+// Start the application
+initialize();

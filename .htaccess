@@ -1,0 +1,11 @@
+# Protect config.js from direct access
+<Files "config.js">
+    Order deny,allow
+    Deny from all
+</Files>
+
+# Allow access to other files
+<FilesMatch "\.(html|css|js|png|jpg|jpeg|gif)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch> 
