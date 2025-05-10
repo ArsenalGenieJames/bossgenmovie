@@ -335,117 +335,72 @@ function initialize() {
             });
     }
 
-    // Initialize carousel with auto-play
-    function initCarousel() {
-        const carousel = document.getElementById('indicators-carousel');
-        const items = carousel.querySelectorAll('[data-carousel-item]');
-        const indicators = carousel.querySelectorAll('[data-carousel-slide-to]');
-        let currentIndex = 0;
-        let interval;
+    // Carousel functionality
+    let currentSlide = 0;
+    const slides = document.querySelectorAll('#movie-list > div, #series-list > div');
+    const indicators = document.querySelectorAll('[data-carousel-indicator]');
 
-        function showSlide(index) {
-            // Hide all slides
-            items.forEach(item => {
-                item.classList.add('hidden');
-                item.classList.remove('duration-700', 'ease-in-out');
-            });
-
-            // Show selected slide
-            items[index].classList.remove('hidden');
-            items[index].classList.add('duration-700', 'ease-in-out');
-
-            // Update indicators
-            indicators.forEach(indicator => {
-                indicator.classList.remove('bg-white');
-                indicator.classList.add('bg-white/70');
-                indicator.setAttribute('aria-current', 'false');
-            });
-
-            indicators[index].classList.remove('bg-white/70');
-            indicators[index].classList.add('bg-white');
+    function showSlide(index) {
+        if (!slides || slides.length === 0) return;
+        
+        // Remove active class from all slides
+        slides.forEach(slide => {
+            if (slide) slide.classList.remove('block');
+            if (slide) slide.classList.add('hidden');
+        });
+        
+        // Remove active class from all indicators
+        indicators.forEach(indicator => {
+            if (indicator) indicator.setAttribute('aria-current', 'false');
+        });
+        
+        // Show the current slide
+        if (slides[index]) {
+            slides[index].classList.remove('hidden');
+            slides[index].classList.add('block');
+        }
+        
+        // Update the active indicator
+        if (indicators[index]) {
             indicators[index].setAttribute('aria-current', 'true');
-            currentIndex = index;
-
-            // Reset video state when changing slides
-            const iframes = document.querySelectorAll('iframe');
-            iframes.forEach(iframe => {
-                const newSrc = iframe.src.replace(/mute=0/, 'mute=1');
-                iframe.src = newSrc;
-            });
         }
-
-        function nextSlide() {
-            const nextIndex = (currentIndex + 1) % items.length;
-            showSlide(nextIndex);
-        }
-
-        function prevSlide() {
-            const prevIndex = (currentIndex - 1 + items.length) % items.length;
-            showSlide(prevIndex);
-        }
-
-        // Auto-play functionality
-        function startAutoPlay() {
-            stopAutoPlay(); // Clear any existing interval
-            interval = setInterval(nextSlide, 8000); // Change slide every 8 seconds
-        }
-
-        function stopAutoPlay() {
-            if (interval) {
-                clearInterval(interval);
-                interval = null;
-            }
-        }
-
-        // Event listeners for manual navigation
-        const prevButton = carousel.querySelector('[data-carousel-prev]');
-        const nextButton = carousel.querySelector('[data-carousel-next]');
-
-        if (prevButton) {
-            prevButton.addEventListener('click', () => {
-                stopAutoPlay();
-                prevSlide();
-                startAutoPlay();
-            });
-        }
-
-        if (nextButton) {
-            nextButton.addEventListener('click', () => {
-                stopAutoPlay();
-                nextSlide();
-                startAutoPlay();
-            });
-        }
-
-        // Event listeners for indicators
-        indicators.forEach((indicator, index) => {
-            indicator.addEventListener('click', () => {
-                stopAutoPlay();
-                showSlide(index);
-                startAutoPlay();
-            });
-        });
-
-        // Start auto-play
-        startAutoPlay();
-
-        // Pause auto-play when hovering over carousel
-        carousel.addEventListener('mouseenter', stopAutoPlay);
-        carousel.addEventListener('mouseleave', startAutoPlay);
-
-        // Add keyboard navigation
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft') {
-                stopAutoPlay();
-                prevSlide();
-                startAutoPlay();
-            } else if (e.key === 'ArrowRight') {
-                stopAutoPlay();
-                nextSlide();
-                startAutoPlay();
-            }
-        });
+        
+        currentSlide = index;
     }
+
+    function nextSlide() {
+        if (!slides || slides.length === 0) return;
+        const next = (currentSlide + 1) % slides.length;
+        showSlide(next);
+    }
+
+    function prevSlide() {
+        if (!slides || slides.length === 0) return;
+        const prev = (currentSlide - 1 + slides.length) % slides.length;
+        showSlide(prev);
+    }
+
+    // Initialize carousel
+    document.addEventListener('DOMContentLoaded', () => {
+        if (slides.length > 0) {
+            showSlide(0);
+            
+            // Add click handlers for next/prev buttons
+            const prevButton = document.querySelector('[data-carousel-prev]');
+            const nextButton = document.querySelector('[data-carousel-next]');
+            
+            if (prevButton) {
+                prevButton.addEventListener('click', prevSlide);
+            }
+            
+            if (nextButton) {
+                nextButton.addEventListener('click', nextSlide);
+            }
+            
+            // Auto-advance slides every 5 seconds
+            setInterval(nextSlide, 5000);
+        }
+    });
 
     // Add global mute toggle function
     window.toggleMute = function(button) {
@@ -477,7 +432,6 @@ function initialize() {
         loadTrendingSeries();
         loadLatestMovies();
         loadLatestSeries();
-        initCarousel();
     });
 
     // Search functionality
