@@ -52,8 +52,7 @@ function initialize() {
             <div class="absolute top-4 right-4 z-40 flex items-center space-x-2">
                 <button class="video-control bg-black/50 hover:bg-black/70 text-white rounded-full p-2" onclick="toggleMute(this)">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" clip-rule="evenodd"></path>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path>
                     </svg>
                 </button>
             </div>`;
@@ -484,3 +483,105 @@ function initialize() {
 
 // Start the application
 initialize();
+
+function createHeroSection(item, type) {
+    const heroSection = document.createElement('div');
+    heroSection.className = 'hidden duration-700 ease-in-out';
+    heroSection.setAttribute('data-carousel-item', 'active');
+    
+    const content = document.createElement('div');
+    content.className = 'relative w-full h-full';
+    
+    // Background Image
+    const bgImage = document.createElement('div');
+    bgImage.className = 'absolute inset-0 w-full h-full';
+    bgImage.style.backgroundImage = `url(https://image.tmdb.org/t/p/original${item.backdrop_path})`;
+    bgImage.style.backgroundSize = 'cover';
+    bgImage.style.backgroundPosition = 'center';
+    bgImage.style.filter = 'brightness(0.7)';
+    
+    // Content Container
+    const contentDiv = document.createElement('div');
+    contentDiv.className = 'relative z-10 flex flex-col justify-center h-full px-4 md:px-8 lg:px-16';
+    
+    // Title
+    const title = document.createElement('h1');
+    title.className = 'text-3xl md:text-5xl font-bold text-white mb-4';
+    title.textContent = type === 'movie' ? item.title : item.name;
+    
+    // Overview
+    const overview = document.createElement('p');
+    overview.className = 'text-white text-sm md:text-base max-w-2xl mb-6';
+    overview.textContent = item.overview;
+    
+    // Watch Now Button
+    const watchButton = document.createElement('a');
+    watchButton.href = `#${type}-${item.id}`;
+    watchButton.className = 'inline-flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors';
+    watchButton.innerHTML = `
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        Watch Now
+    `;
+    
+    contentDiv.appendChild(title);
+    contentDiv.appendChild(overview);
+    contentDiv.appendChild(watchButton);
+    
+    content.appendChild(bgImage);
+    content.appendChild(contentDiv);
+    heroSection.appendChild(content);
+    
+    return heroSection;
+}
+
+// Initialize carousel
+document.addEventListener('DOMContentLoaded', () => {
+    const carousel = document.getElementById('indicators-carousel');
+    if (carousel) {
+        const items = carousel.querySelectorAll('[data-carousel-item]');
+        const indicators = carousel.querySelectorAll('[data-carousel-indicator]');
+        let currentIndex = 0;
+
+        function showSlide(index) {
+            items.forEach((item, i) => {
+                item.classList.toggle('hidden', i !== index);
+                item.classList.toggle('block', i === index);
+            });
+            
+            indicators.forEach((indicator, i) => {
+                indicator.setAttribute('aria-current', i === index);
+            });
+        }
+
+        // Previous button
+        const prevButton = carousel.querySelector('[data-carousel-prev]');
+        if (prevButton) {
+            prevButton.addEventListener('click', () => {
+                currentIndex = (currentIndex - 1 + items.length) % items.length;
+                showSlide(currentIndex);
+            });
+        }
+
+        // Next button
+        const nextButton = carousel.querySelector('[data-carousel-next]');
+        if (nextButton) {
+            nextButton.addEventListener('click', () => {
+                currentIndex = (currentIndex + 1) % items.length;
+                showSlide(currentIndex);
+            });
+        }
+
+        // Auto-advance
+        const interval = carousel.getAttribute('data-carousel-interval') || 5000;
+        setInterval(() => {
+            currentIndex = (currentIndex + 1) % items.length;
+            showSlide(currentIndex);
+        }, interval);
+
+        // Show first slide
+        showSlide(0);
+    }
+});

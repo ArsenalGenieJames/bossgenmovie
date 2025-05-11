@@ -16,24 +16,64 @@ function initialize() {
     const episode = urlParams.get('episode') || '1';
 
     if (watch_id) {
-        const version = "v2";
-        const embedUrl = type === 'tv' 
-            ? `https://vidsrc.cc/${version}/embed/${type}/${watch_id}/${season}/${episode}?autoPlay=false`
-            : `https://vidsrc.cc/${version}/embed/${type}/${watch_id}?autoPlay=false`;
+        const embedSources = [
+            type === 'tv' 
+                ? `https://vidsrc.cc/v2/embed/tv/${watch_id}/${season}/${episode}?autoPlay=false`
+                : `https://vidsrc.cc/v2/embed/movie/${watch_id}?autoPlay=false`,
+            type === 'tv'
+                ? `https://www.2embed.to/embed/tmdb/tv?id=${watch_id}&s=${season}&e=${episode}`
+                : `https://www.2embed.to/embed/tmdb/movie?id=${watch_id}`,
+            type === 'tv'
+                ? `https://multiembed.mov/?video_id=${watch_id}&tmdb=1&s=${season}&e=${episode}`
+                : `https://multiembed.mov/?video_id=${watch_id}&tmdb=1`
+        ];
 
-        player.innerHTML = `
-            <div class="relative pt-[56.25%]">
-                <iframe 
-                    class="absolute top-0 left-0 w-full h-full"
-                    src="${embedUrl}" 
-                    frameborder="0" 
-                    allow="autoplay; fullscreen" 
-                    allowfullscreen>
-                </iframe>
-            </div>`;
+        let currentSourceIndex = 0;
+
+        function loadPlayer(index) {
+            player.innerHTML = `
+                <div class="relative pt-[56.25%]">
+                    <iframe 
+                        class="absolute top-0 left-0 w-full h-full"
+                        src="${embedSources[index]}" 
+                        frameborder="0" 
+                        allow="autoplay; fullscreen" 
+                        allowfullscreen
+                        onerror="this.onerror=null; switchSource();">
+                    </iframe>
+                </div>
+                <div class="mt-2 text-center space-x-2 mt-2">
+                     <p class="text-white mb-2 text-lg font-bold">Switch Server</p>
+                    <button onclick="loadPlayer(0)" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600">
+                        Server 1 (VidSrc)
+                    </button>
+                    <button onclick="loadPlayer(1)" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600">
+                        Server 2 (2Embed)
+                    </button>
+                    <button onclick="loadPlayer(2)" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600">
+                        Server 3 (MultiEmbed)
+                    </button>
+                </div>
+            `;
+        }
+
+        function switchSource() {
+            currentSourceIndex = (currentSourceIndex + 1) % embedSources.length;
+            loadPlayer(currentSourceIndex);
+        }
+
+        loadPlayer(currentSourceIndex);
+
+        document.addEventListener('click', (e) => {
+            if (e.target && e.target.id === 'switch-server') {
+                switchSource();
+            }
+        });
 
         const detailsUrl = `https://api.themoviedb.org/3/${type}/${watch_id}?api_key=${apiKey}&language=en-US`;
         const recommendationsUrl = `https://api.themoviedb.org/3/${type}/${watch_id}/recommendations?api_key=${apiKey}&language=en-US`;
+        const trendingMoviesUrl = `https://api.themoviedb.org/3/trending/movie/day?api_key=${apiKey}&language=en-US`;
+        const trendingSeriesUrl = `https://api.themoviedb.org/3/trending/tv/day?api_key=${apiKey}&language=en-US`;
 
         // Fetch season details if it's a TV series
         const seasonUrl = type === 'tv' 
@@ -48,6 +88,14 @@ function initialize() {
             fetch(recommendationsUrl).then(response => {
                 if (!response.ok) throw new Error(`Recommendations API error: ${response.status}`);
                 return response.json();
+            }),
+            fetch(trendingMoviesUrl).then(response => {
+                if (!response.ok) throw new Error(`Trending Movies API error: ${response.status}`);
+                return response.json();
+            }),
+            fetch(trendingSeriesUrl).then(response => {
+                if (!response.ok) throw new Error(`Trending Series API error: ${response.status}`);
+                return response.json();
             })
         ];
 
@@ -61,7 +109,7 @@ function initialize() {
         }
 
         Promise.all(fetchPromises)
-            .then(([detailsData, recommendationsData, seasonData]) => {
+            .then(([detailsData, recommendationsData, trendingMoviesData, trendingSeriesData, seasonData]) => {
                 const title = detailsData.title || detailsData.name;
                 const overview = detailsData.overview;
                 const posterPath = detailsData.poster_path;
@@ -99,19 +147,34 @@ function initialize() {
                 }
 
                 const recommendations = recommendationsData.results.slice(0, 6);
-                const recommendationsHTML = recommendations.map(item => `
+                const trendingMovies = trendingMoviesData.results.slice(0, 6);
+                const trendingSeries = trendingSeriesData.results.slice(0, 6);
+
+                const createMediaCard = (item, mediaType) => `
                     <div class="relative group">
                         <img src="https://image.tmdb.org/t/p/w500${item.poster_path}" 
                              alt="${item.title || item.name}" 
                              class="w-full rounded-lg shadow-lg transition-transform duration-300 group-hover:scale-105">
                         <div class="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black to-transparent">
-                            <a href="/watch.html?type=${item.media_type}&id=${item.id}" 
+                            <a href="/watch.html?type=${mediaType}&id=${item.id}" 
                                class="text-white font-semibold hover:text-blue-400">
                                 ${item.title || item.name}
                             </a>
                         </div>
                     </div>
-                `).join('');
+                `;
+
+                const recommendationsHTML = recommendations.map(item => 
+                    createMediaCard(item, item.media_type || type)
+                ).join('');
+
+                const trendingMoviesHTML = trendingMovies.map(item => 
+                    createMediaCard(item, 'movie')
+                ).join('');
+
+                const trendingSeriesHTML = trendingSeries.map(item => 
+                    createMediaCard(item, 'tv')
+                ).join('');
 
                 detailsContainer.innerHTML = `
                     <div class="max-w-screen-xl mx-auto p-4">
@@ -143,6 +206,18 @@ function initialize() {
                             <h2 class="text-2xl font-bold text-white mb-6">Recommended</h2>
                             <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                                 ${recommendationsHTML}
+                            </div>
+                        </div>
+                        <div class="mt-12">
+                            <h2 class="text-2xl font-bold text-white mb-6">Trending Movies</h2>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                ${trendingMoviesHTML}
+                            </div>
+                        </div>
+                        <div class="mt-12">
+                            <h2 class="text-2xl font-bold text-white mb-6">Trending Series</h2>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                ${trendingSeriesHTML}
                             </div>
                         </div>
                     </div>`;

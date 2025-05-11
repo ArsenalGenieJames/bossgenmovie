@@ -71,29 +71,6 @@
                 <!-- Series slides will be dynamically inserted here -->
             </div>
         </div>
-
-        <!-- Slider indicators -->
-        <div class="absolute z-30 flex -translate-x-1/2 space-x-3 rtl:space-x-reverse bottom-5 left-1/2">
-            <!-- Indicators will be dynamically inserted here -->
-        </div>
-
-        <!-- Slider controls -->
-        <button type="button" class="absolute top-0 left-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none" data-carousel-prev>
-            <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 hover:bg-white/50 focus:ring-4 focus:ring-white group-focus:outline-none">
-                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 6 10">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 1 1 5l4 4" />
-                </svg>
-                <span class="sr-only">Previous</span>
-            </span>
-        </button>
-        <button type="button" class="absolute top-0 right-0 z-30 flex items-center justify-center h-full px-4 cursor-pointer group focus:outline-none" data-carousel-next>
-            <span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-white/30 hover:bg-white/50 focus:ring-4 focus:ring-white group-focus:outline-none">
-                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 6 10">
-                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4" />
-                </svg>
-                <span class="sr-only">Next</span>
-            </span>
-        </button>
     </div>
 
    
@@ -351,6 +328,67 @@
     </div>
 </footer>
 
+            <!-- Floating Chat Box -->
+            <div class="fixed bottom-4 right-4 z-50">
+                <!-- Chat Icon Button -->
+                <button onclick="toggleChat()" class="bg-gray-800 p-3 rounded-full shadow-lg hover:bg-gray-700 transition-all duration-300">
+                    <img src="./img/BOSSGEN.png" alt="Chat Support" class="w-10 h-10 object-cover rounded-full" onerror="this.src='data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+PHBhdGggZD0iTTIwIDJINGMtMS4xIDAtMiAuOS0yIDJ2MThjMCAxLjEuOSAyIDIgMmgxNmMxLjEgMCAyLS45IDItMlY0YzAtMS4xLS45LTItMi0yem0tMiAxNkg2di0yaDEydjJ6bTAtNEg2di0yaDEydjJ6bTAtNEg2VjhoMTJ2MnoiLz48L3N2Zz4='"/>
+                </button>
+
+                <!-- Chat Box (Hidden by Default) -->
+                <div id="chat-box" class="hidden absolute bottom-16 right-0 w-80 bg-gray-800 rounded-lg shadow-lg overflow-hidden transition-all duration-300 mb-5">
+                    <!-- Chat Header -->
+                    <div class="bg-gray-700 p-4 flex justify-between items-center">
+                        <div class="flex items-center">
+                            <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                            <h3 class="text-white font-medium">Bossgen Chat Support</h3>
+                        </div>
+                        <button class="text-gray-400 hover:text-white" onclick="toggleChat()">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- Chat Messages -->
+                    <div id="chat-messages" class="h-80 overflow-y-auto p-4 bg-gray-900">
+                        <div class="flex flex-col space-y-4">
+                            <!-- Bot Message -->
+                            <div class="flex items-start">
+                                <div class="bg-gray-700 rounded-lg p-3 max-w-[80%]">
+                                    <p class="text-white">Hello this is Bossgen! How can I help you today?</p>
+                                    <p class="text-white mt-2">You can ask me about:</p>
+                                    <ul class="text-gray-300 list-disc list-inside mt-2">
+                                        <li>Action movies</li>
+                                        <li>Comedy movies</li>
+                                        <li>Drama movies</li>
+                                        <li>Horror movies</li>
+                                        <li>Anime movies</li>
+                                        <li>TV series recommendations</li>
+                                        <li>Latest trending shows</li>
+                                    </ul>
+                                    <p class="text-white mt-2">Just type any of these keywords or ask about specific movies/shows!</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Input -->
+                    <div class="p-4 border-t border-gray-700">
+                        <div class="flex space-x-2">
+                            <input type="text" id="chat-input" 
+                                   class="flex-1 bg-gray-700 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 mb-2" 
+                                   placeholder="Type your message...">
+                            <button onclick="sendMessage()" 
+                                    class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors mb-2">
+                                Send
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script src="chatbox.js"></script>
             <script src="config.js"></script>
             <script src="script.js"></script>
 </body>
