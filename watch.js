@@ -50,7 +50,7 @@ function initialize() {
                     <button onclick="loadPlayer(1)" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600">
                         Server 2 (2Embed)
                     </button>
-                    <button onclick="loadPlayer(2)" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600">
+                    <button onclick="loadPlayer(2)" class="bg-gray-700 text-white px-4 py-2 rounded hover:bg-gray-600 mt-2">
                         Server 3 (MultiEmbed)
                     </button>
                 </div>
